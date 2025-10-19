@@ -22,7 +22,8 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background-color: rgba(0, 0, 0, .2);
+      background-color: rgba(0, 0, 0, 0.2);
+      display: block;
     }
   </style>
 </head>
@@ -32,38 +33,34 @@
 
   <script>
     window.requestAnimationFrame =
-      window.__requestAnimationFrame ||
       window.requestAnimationFrame ||
       window.webkitRequestAnimationFrame ||
       window.mozRequestAnimationFrame ||
-      window.oRequestAnimationFrame ||
-      window.msRequestAnimationFrame ||
-      (cb => setTimeout(cb, 1000 / 60));
+      function (cb) { return setTimeout(cb, 1000 / 60); };
 
-    var loaded = false;
-    var init = function () {
-      if (loaded) return;
-      loaded = true;
-      var canvas = document.getElementById('heart');
-      var ctx = canvas.getContext('2d');
+    function init() {
+      const canvas = document.getElementById("heart");
+      const ctx = canvas.getContext("2d");
 
-      // ✅ Tự động scale theo thiết bị (mobile hay desktop)
+      // ✅ Đặt kích thước chuẩn cho canvas theo devicePixelRatio
       function resize() {
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = window.innerWidth * dpr;
-        canvas.height = window.innerHeight * dpr;
+        const rect = canvas.getBoundingClientRect();
+
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
         ctx.scale(dpr, dpr);
       }
+
       resize();
-      window.addEventListener('resize', resize);
+      window.addEventListener("resize", resize);
 
       const rand = Math.random;
-      const width = () => window.innerWidth;
-      const height = () => window.innerHeight;
-
-      const heartPosition = rad => [
+      const heartPosition = (rad) => [
         Math.pow(Math.sin(rad), 3),
-        -(15 * Math.cos(rad) - 5 * Math.cos(2 * rad) - 2 * Math.cos(3 * rad) - Math.cos(4 * rad))
+        -(15 * Math.cos(rad) - 5 * Math.cos(2 * rad) - 2 * Math.cos(3 * rad) - Math.cos(4 * rad)),
       ];
       const scaleAndTranslate = (pos, sx, sy, dx, dy) => [dx + pos[0] * sx, dy + pos[1] * sy];
 
@@ -74,25 +71,28 @@
 
       const heartPointsCount = pointsOrigin.length;
       const targetPoints = [];
-      const pulse = (kx, ky) => {
+      const pulse = (kx, ky, w, h) => {
         for (let i = 0; i < pointsOrigin.length; i++) {
           targetPoints[i] = [
-            kx * pointsOrigin[i][0] + width() / 2,
-            ky * pointsOrigin[i][1] + height() / 2
+            kx * pointsOrigin[i][0] + w / 2,
+            ky * pointsOrigin[i][1] + h / 2,
           ];
         }
       };
 
       const e = [];
+      const width = () => canvas.clientWidth;
+      const height = () => canvas.clientHeight;
+
       for (let i = 0; i < heartPointsCount; i++) {
         const x = rand() * width();
         const y = rand() * height();
         e[i] = {
-          vx: 0, vy: 0, R: 2, speed: rand() + 5,
+          vx: 0, vy: 0, speed: rand() + 5,
           q: ~~(rand() * heartPointsCount),
           D: 2 * (i % 2) - 1,
           force: 0.2 * rand() + 0.7,
-          f: `hsla(${~~(rand() * 20 + 300)},90%,${~~(60 * rand() + 40)}%,.4)`,
+          f: `hsla(${~~(rand() * 20 + 300)},90%,${~~(60 * rand() + 40)}%,.5)`,
           trace: Array.from({ length: traceCount }, () => ({ x, y }))
         };
       }
@@ -101,12 +101,13 @@
       let time = 0;
 
       function loop() {
+        const w = width(), h = height();
         const n = -Math.cos(time);
-        pulse((1 + n) * 0.5, (1 + n) * 0.5);
-        time += ((Math.sin(time)) < 0 ? 9 : (n > 0.8) ? .2 : 1) * config.timeDelta;
+        pulse((1 + n) * 0.5, (1 + n) * 0.5, w, h);
+        time += ((Math.sin(time)) < 0 ? 9 : (n > 0.8) ? 0.2 : 1) * config.timeDelta;
 
-        ctx.fillStyle = "rgba(0,0,0,.1)";
-        ctx.fillRect(0, 0, width(), height());
+        ctx.fillStyle = "rgba(0,0,0,0.15)";
+        ctx.fillRect(0, 0, w, h);
 
         for (let i = e.length; i--;) {
           const u = e[i];
@@ -138,17 +139,21 @@
           }
 
           ctx.fillStyle = u.f;
-          for (let k = 0; k < u.trace.length; k++) ctx.fillRect(u.trace[k].x, u.trace[k].y, 1, 1);
+          for (let k = 0; k < u.trace.length; k++) {
+            ctx.fillRect(u.trace[k].x, u.trace[k].y, 1, 1);
+          }
         }
 
         window.requestAnimationFrame(loop);
       }
-      loop();
-    };
 
-    document.readyState === 'complete'
+      loop();
+    }
+
+    document.readyState === "complete"
       ? init()
-      : document.addEventListener('DOMContentLoaded', init);
+      : document.addEventListener("DOMContentLoaded", init);
   </script>
 </body>
+
 </html>
